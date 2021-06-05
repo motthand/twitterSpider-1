@@ -68,8 +68,8 @@ class TwitterApi(TwitterLogin, ExtractorApi):
         选择器
         :param url: url
         :param params: 参数
-        :param return_dict: 是否返回字典格式
-        :param fetch: 是否请求
+        :param kwargs return_dict: 是否返回字典格式
+        :param kwargs fetch: 是否请求
         :return:
         """
         fetch = kwargs.get('fetch', True)
