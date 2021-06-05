@@ -65,11 +65,4 @@ class TwitterSpider(SpiderAPI):
 
 if __name__ == '__main__':
     t = TwitterSpider()
-    # t.getOne_Following()
-    # t.getOne_Followers()
-    # t.getOne_FollowersYouKnow()
-
-    # t.getOne_UserMedia()
-    # t.getOne_Likes()
-    # t.getOne_UserTweets()
     # t.getMyFollowing()

@@ -36,13 +36,13 @@ class Download(DataAnalysis):
 
     def download_img(self, base_path=None):
         download_info = []
-        for item in self.iter_get_all(self.redis_UserMedia_name):
+        for item in self.iter_get_all(self._analysis_redis_UserMedia):
             key, item = item
             item = json.loads(item)
             # print(item)
             finder = JsonDataFinder(item)
             name = finder.find_first_data('昵称')
-            path = os.path.join(base_path if base_path else os.getcwd(), self.redis_UserLikes_name, name)
+            path = os.path.join(base_path if base_path else os.getcwd(), self._analysis_redis_UserLikes, name)
 
             url_list = finder.find_all_data('media_url_https')
             if url_list:

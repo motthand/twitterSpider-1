@@ -14,6 +14,7 @@
 import json
 
 from config import global_config
+from utils.exception import TSException
 
 
 class ConnectionRedisPool(object):
@@ -47,7 +48,7 @@ class BaseRedis(ConnectionRedisPool):
         value = json.dumps(data, ensure_ascii=False)
         self.redis.hset(name=redis_name, key=redis_key, value=value)
 
-    def execute(self, redis_name, redis_key, data: dict, over=True):
+    def execute(self, redis_name, redis_key, data: dict, **kwargs):
         """
         执行
         :param redis_name:
@@ -55,6 +56,9 @@ class BaseRedis(ConnectionRedisPool):
         :param data:
         :return:
         """
+        over = kwargs.get('over', True)
+        if not isinstance(over, bool):
+            raise TSException(f"类型错误应该为bool:{type(over)}")
         if over:
             self.redis_hset(redis_name, redis_key, data)
         else:
@@ -63,13 +67,33 @@ class BaseRedis(ConnectionRedisPool):
 
 
 class SpiderRedis(BaseRedis):
-    redis_Following = "Following"
-    redis_Follower = "Follower"
-    redis_FollowersYouKnow = "FollowersYouKnow"
-    redis_UserMedia = "UserMedia"
-    redis_UserLikes = "UserLikes"
-    redis_UserTweets = "UserTweets"
 
-    redis_userInfo_name = "analysis_userInfo_"
-    redis_UserLikes_name = "analysis_UserLikes"
-    redis_UserMedia_name = "analysis_UserMedia"
+    def __init__(self):
+        super(SpiderRedis, self).__init__()
+        self._spider_Following = "Following"
+        self._spider_Follower = "Follower"
+        self._spider_FollowersYouKnow = "FollowersYouKnow"
+        self._spider_UserMedia = "UserMedia"
+        self._spider_UserLikes = "UserLikes"
+        self._spider_UserTweets = "UserTweets"
+
+        _analysis = 'analysis_'
+        _analysis_userInfo = f"{_analysis}userInfo"
+
+        self.redis_name_item = {
+            "spider_analysis_info": {
+                self._spider_Following: _analysis_userInfo,
+                self._spider_Follower: _analysis_userInfo,
+                self._spider_FollowersYouKnow: _analysis_userInfo,
+
+            },
+            "spider_analysis": {
+                self._spider_UserMedia: _analysis + self._spider_UserMedia,
+                self._spider_UserLikes: _analysis + self._spider_UserLikes,
+                self._spider_UserTweets: _analysis + self._spider_UserTweets,
+            }
+        }
+
+
+if __name__ == '__main__':
+    s = SpiderRedis()

@@ -195,7 +195,7 @@ class BaseExtract(BaseAnalysis):
 
 class DataExtract(BaseExtract):
 
-    def get_UserInfo(self, name, new_name):
+    def get_UserInfo(self, name, new_name, **kwargs):
         """
         获取推特用户信息
         :param name: 读取的redis库
@@ -212,11 +212,13 @@ class DataExtract(BaseExtract):
             }
             effective = any([True if item else False for key, item in info[only_key].items()])
             if effective:
+                self.execute(redis_name=new_name, redis_key=only_key, data=info, **kwargs)
                 logger.info(f"获取推特用户信息成功：{info}")
-                self.execute(redis_name=new_name, redis_key=only_key, data=info, over=True)
 
-    def get_UserLikesInfo(self, name, new_name, over=True):
-        """"""
+    def get_UserLikesInfo(self, name, new_name, **kwargs):
+        """
+        提取用户喜欢信息
+        """
         for num, (rest_id, item) in enumerate(self.iter_get_all(name)):
             item = json.loads(item)
             if not isinstance(item, dict):
@@ -233,14 +235,15 @@ class DataExtract(BaseExtract):
                     "UserInfo": self.extract_userInfo(owner_finder),
                     "userLikesInfo": self.extract_userLikesInfo(legacy),
                 }
-                self.execute(redis_name=new_name, redis_key=rest_id, data=info, over=over)
+                self.execute(redis_name=new_name, redis_key=rest_id, data=info, **kwargs)
+                logger.info(f"获取推特用户喜欢成功：{info}")
 
-    def get_UserMediaInfo(self, name, new_name, over=True):
+    def get_UserMediaInfo(self, name, new_name, **kwargs):
         """
         提取用户媒体信息
         :param name:
         :param new_name:
-        :param over:
+        :param kwargs over:
         :return:
         """
         for num, (rest_id, item) in enumerate(self.iter_get_all(name)):
@@ -257,41 +260,25 @@ class DataExtract(BaseExtract):
                     "UserInfo": self.extract_userInfo(owner),
                     "userMediaInfo": self.extract_userMediaInfo(legacy)
                 }
-                self.execute(redis_name=new_name, redis_key=rest_id, data=info, over=over)
+                self.execute(redis_name=new_name, redis_key=rest_id, data=info, **kwargs)
                 logger.info(f"提取用户媒体信息成功：{info}")
 
 
 class DataAnalysis(DataExtract):
 
-    def get_allTwitterUserInfo(self):
+    def get_allTwitterInfo(self):
         """获取所有推特用户信息"""
-        name_list = [
-            self.redis_Following,
-            self.redis_Follower,
-            self.redis_FollowersYouKnow,
-            self.redis_UserMedia,
-            self.redis_UserLikes,
-            self.redis_UserTweets
-        ]
+        # for spider, analysis in self.redis_name_item.get('spider_analysis_info').items():
+        #     logger.info(f"[用户信息]正在处理redis数据库并获取:{spider} {analysis}")
+        #     self.get_UserInfo(name=spider, new_name=analysis)
 
-        for name in name_list:
-            new_name = self.redis_userInfo_name + name
-            self.get_UserInfo(name=name, new_name=new_name)
-
-    def get_allUserMedia(self):
-        """"""
-        name = self.redis_UserMedia
-        new_name = self.redis_UserMedia_name
-        self.get_UserMediaInfo(name=name, new_name=new_name)
-
-    def get_allUserLikesInfo(self):
-        name = self.redis_UserLikes
-        new_name = self.redis_UserLikes_name
-        self.get_UserLikesInfo(name=name, new_name=new_name)
-
+        for spider, analysis in self.redis_name_item.get('spider_analysis').items():
+            logger.info(f"[喜欢数据]正在处理redis数据库并获取:{spider} {analysis}")
+            self.get_UserLikesInfo(name=spider, new_name=analysis)
+            logger.info(f"[媒体数据]正在处理redis数据库并获取:{spider} {analysis}")
+            self.get_UserMediaInfo(name=spider, new_name=analysis)
+            logger.info(f"[推文数据]正在处理redis数据库并获取:{spider} {analysis}")
 
 if __name__ == '__main__':
     d = DataAnalysis()
-    # d.get_allUserMedia()
-    # d.get_allTwitterUserInfo()
-    # d.get_allUserLikesInfo()
+    d.get_allTwitterInfo()
