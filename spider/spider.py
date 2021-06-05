@@ -69,7 +69,7 @@ if __name__ == '__main__':
     # t.getOne_Followers()
     # t.getOne_FollowersYouKnow()
 
-    # t.getOne_UserMedia('1126756908193308672')
-    t.getOne_Likes('1126756908193308672')
-    t.getOne_UserTweets('1126756908193308672')
+    # t.getOne_UserMedia()
+    # t.getOne_Likes()
+    # t.getOne_UserTweets()
     # t.getMyFollowing()
