@@ -14,6 +14,7 @@ import inspect
 
 from api.twitter import TwitterApi
 from extractor.extractor import ExtractorApi
+from utils.exception import TSException
 from utils.logger import logger
 from utils.twitter_redis import SpiderRedis
 
@@ -29,7 +30,8 @@ class SpiderAPI(TwitterApi, ExtractorApi):
         self.redis = self.spider_redis.redis
         self.num = 1
 
-    def doc_info(self, method):
+    @staticmethod
+    def doc_info(method):
         """
         获取方法的注释信息 前两行
         :param method:
@@ -39,6 +41,28 @@ class SpiderAPI(TwitterApi, ExtractorApi):
         start_prompt = doc[0]
         end_prompt = doc[1].strip()
         return start_prompt, end_prompt
+
+    def init_params(self, **kwargs):
+        count = kwargs.get('count', 20)
+        over = kwargs.get('over', True)
+        return_dict = kwargs.get('return_dict', True)
+        fetch = kwargs.get('fetch', True)
+        if not isinstance(over, bool):
+            raise TSException(f"类型错误应该为bool:{type(over)}")
+        if not isinstance(return_dict, bool):
+            raise TSException(f"类型错误应该为bool:{type(return_dict)}")
+        if not isinstance(fetch, bool):
+            raise TSException(f"类型错误应该为bool:{type(fetch)}")
+        return count, over, return_dict, fetch
+
+    def get_function(self):
+        """
+        获取被指定调用的方法
+        """
+        current = inspect.currentframe()
+        get_outer = inspect.getouterframes(current, 2)
+        function = getattr(self, get_outer[2][3])
+        return function
 
     def follow_judge(self, rest_id, cursor, redis_name, api, **kwargs):
         """
@@ -55,15 +79,10 @@ class SpiderAPI(TwitterApi, ExtractorApi):
         """
         rest_id = self.user_id if rest_id is None else rest_id
         self.user_id = rest_id
-        count = kwargs.get('count', 20)
-        over = kwargs.get('over', True)
-        return_dict = kwargs.get('return_dict', True)
-        fetch = kwargs.get('fetch', True)
+        count, over, return_dict, fetch = self.init_params(**kwargs)
 
-        current = inspect.currentframe()
-        getouter = inspect.getouterframes(current, 2)
-        callback = getattr(self, getouter[1][3])
-        start_prompt, end_prompt = self.doc_info(callback)
+        function = self.get_function()
+        start_prompt, end_prompt = self.doc_info(function)
 
         # 获取数据
         resp = api(rest_id=rest_id, cursor=cursor, count=count, return_dict=return_dict, fetch=fetch)
@@ -88,7 +107,7 @@ class SpiderAPI(TwitterApi, ExtractorApi):
             self.num += 1
 
         cursor = self.find_first_data(resp, 'value')
-        callback(cursor=cursor)
+        function(cursor=cursor)
 
     def user_judge(self, rest_id, cursor, redis_name, api, **kwargs):
         """
@@ -105,15 +124,10 @@ class SpiderAPI(TwitterApi, ExtractorApi):
         """
         rest_id = self.user_id if rest_id is None else rest_id
         self.user_id = rest_id
-        count = kwargs.get('count', 20)
-        over = kwargs.get('over', True)
-        return_dict = kwargs.get('return_dict', True)
-        fetch = kwargs.get('fetch', True)
+        count, over, return_dict, fetch = self.init_params(**kwargs)
 
-        curframe = inspect.currentframe()
-        calframe = inspect.getouterframes(curframe, 2)
-        callback = getattr(self, calframe[1][3])
-        start_prompt, end_prompt = self.doc_info(callback)
+        function = self.get_function()
+        start_prompt, end_prompt = self.doc_info(function)
 
         resp = api(rest_id=rest_id, cursor=cursor, count=count, return_dict=return_dict, fetch=fetch)
 
@@ -147,7 +161,7 @@ class SpiderAPI(TwitterApi, ExtractorApi):
             self.num += 1
 
         cursor = self.find_last_data(resp, 'value')
-        callback(cursor=cursor)
+        function(cursor=cursor)
 
     def getOne_Following(self, rest_id=None, cursor=None, **kwargs):
         """
@@ -249,7 +263,7 @@ class SpiderAPI(TwitterApi, ExtractorApi):
 
 if __name__ == '__main__':
     t = SpiderAPI()
-    # t.getOne_Following()
+    t.getOne_Following()
     # t.getOne_Followers()
     # t.getOne_FollowersYouKnow()
     # t.getOne_UserMedia()
