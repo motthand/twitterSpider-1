@@ -63,7 +63,7 @@ class TwitterApi(TwitterLogin, ExtractorApi):
         session = self.session if session is None else session
         return fetch_json(session=session, url=url, method=method, **kwargs)
 
-    def selector(self, url, params, return_dict=True, fetch=True) -> dict:
+    def selector(self, url, params, **kwargs) -> dict:
         """
         选择器
         :param url: url
@@ -72,25 +72,32 @@ class TwitterApi(TwitterLogin, ExtractorApi):
         :param fetch: 是否请求
         :return:
         """
+        fetch = kwargs.get('fetch', True)
+        return_dict = kwargs.get('return_dict', True)
+
+        if not isinstance(fetch, bool):
+            raise Exception(type(fetch))
+        if not isinstance(return_dict, bool):
+            raise Exception(type(return_dict))
+
         if fetch:
             if return_dict:
-                return self.fetch_dict(url, params=params)
-            return self.fetch_json(url, params=params)
+                return self.fetch_dict(url=url, params=params)
+            return self.fetch_json(url=url, params=params)
         return {"url": url, "params": params}
 
-    def API_UserByScreenNameWithoutResults(self, screen_name, return_dict=True, fetch=True):
+    def API_UserByScreenNameWithoutResults(self, screen_name, **kwargs):
         """
-
         :param screen_name:
-        :param return_dict: 是否返回字典格式
-        :param fetch: 是否请求
+        :param kwargs return_dict: 是否返回字典格式
+        :param kwargs fetch: 是否请求
         :return:
         """
         url = self.UserByScreenNameWithoutResults
         params = {
             "variables": json.dumps({"screen_name": screen_name, "withHighlightedLabel": True})
         }
-        return self.selector(url, params, return_dict, fetch)
+        return self.selector(url=url, params=params, **kwargs)
 
     def API_Notifications(self):
         """
@@ -152,14 +159,14 @@ class TwitterApi(TwitterLogin, ExtractorApi):
         logger.info(f"本账号的user_id: {user_id}")
         return user_id
 
-    def API_Following(self, rest_id, cursor=None, count=20, return_dict=True, fetch=True) -> dict:
+    def API_Following(self, rest_id, cursor=None, count=20, **kwargs) -> dict:
         """
         正在关注
         :param rest_id: 用户id
         :param cursor: 筛选条件
         :param count: 数量
-        :param return_dict: 是否返回字典格式
-        :param fetch: 是否请求
+        :param kwargs return_dict: 是否返回字典格式
+        :param kwargs fetch: 是否请求
         :return:
         """
         url = self.Following
@@ -179,16 +186,16 @@ class TwitterApi(TwitterLogin, ExtractorApi):
             })
         }
 
-        return self.selector(url, params, return_dict, fetch)
+        return self.selector(url=url, params=params, **kwargs)
 
-    def API_Followers(self, rest_id, cursor=None, count=20, return_dict=True, fetch=True) -> dict:
+    def API_Followers(self, rest_id, cursor=None, count=20, **kwargs) -> dict:
         """
         关注者
         :param rest_id: 用户id
         :param cursor: 筛选条件
         :param count: 数量
-        :param return_dict: 是否返回字典格式
-        ::param fetch: 是否请求
+        :param kwargs return_dict: 是否返回字典格式
+        ::param kwargs fetch: 是否请求
         :return:
         """
         url = self.Followers
@@ -207,16 +214,16 @@ class TwitterApi(TwitterLogin, ExtractorApi):
                 'withBirdwatchPivots': False
             })
         }
-        return self.selector(url, params, return_dict, fetch)
+        return self.selector(url=url, params=params, **kwargs)
 
-    def API_FollowersYouKnow(self, rest_id, cursor=None, count=20, return_dict=True, fetch=True) -> dict:
+    def API_FollowersYouKnow(self, rest_id, cursor=None, count=20, **kwargs) -> dict:
         """
         可能认识的人
         :param rest_id: 用户id
         :param cursor: 筛选条件
         :param count: 数量
-        :param return_dict: 是否返回字典格式
-        :param fetch: 是否请求
+        :param kwargs return_dict: 是否返回字典格式
+        :param kwargs fetch: 是否请求
         :return:
         """
         url = self.FollowersYouKnow
@@ -233,16 +240,16 @@ class TwitterApi(TwitterLogin, ExtractorApi):
             'withNonLegacyCard': True,
             'withBirdwatchPivots': False
         })}
-        return self.selector(url, params, return_dict, fetch)
+        return self.selector(url=url, params=params, **kwargs)
 
-    def API_UserMedia(self, rest_id, cursor=None, count=20, return_dict=True, fetch=True) -> dict:
+    def API_UserMedia(self, rest_id, cursor=None, count=20, **kwargs) -> dict:
         """
         获取用户媒体
         :param rest_id: 用户id
         :param cursor: 筛选条件
         :param count: 数量
-        :param return_dict: 是否返回字典格式
-        :param fetch: 是否请求
+        :param kwargs return_dict: 是否返回字典格式
+        :param kwargs fetch: 是否请求
         :return:
         """
         url = self.UserMedia
@@ -250,8 +257,8 @@ class TwitterApi(TwitterLogin, ExtractorApi):
             "userId": rest_id,
             "count": count,
             "cursor": cursor,
-            "withHighlightedLabel": False,   # tweet->core->user->affiliates_highlighted_label
-            "withTweetQuoteCount": False,    # tweet->legacy->quote_count
+            "withHighlightedLabel": False,
+            "withTweetQuoteCount": False,
             "includePromotedContent": False,
             "withTweetResult": False,
             "withReactions": False,
@@ -262,16 +269,16 @@ class TwitterApi(TwitterLogin, ExtractorApi):
             "withVoice": False,
             "withNonLegacyCard": True
         })}
-        return self.selector(url, params, return_dict, fetch)
+        return self.selector(url=url, params=params, **kwargs)
 
-    def API_UserLikes(self, rest_id, cursor=None, count=20, return_dict=True, fetch=True) -> dict:
+    def API_UserLikes(self, rest_id, cursor=None, count=20, **kwargs) -> dict:
         """
         用户喜欢
         :param rest_id: 用户id
         :param cursor: 筛选条件
         :param count: 数量
-        :param return_dict: 是否返回字典格式
-        :param fetch: 是否请求
+        :param kwargs return_dict: 是否返回字典格式
+        :param kwargs fetch: 是否请求
         :return:
         """
         url = self.Likes
@@ -291,16 +298,16 @@ class TwitterApi(TwitterLogin, ExtractorApi):
             'withVoice': False,
             'withNonLegacyCard': True
         })}
-        return self.selector(url, params, return_dict, fetch)
+        return self.selector(url, params, **kwargs)
 
-    def API_UserTweets(self, rest_id, cursor=None, count=20, return_dict=True, fetch=True) -> dict:
+    def API_UserTweets(self, rest_id, cursor=None, count=20, **kwargs) -> dict:
         """
         用户推文
         :param rest_id: 用户id
         :param cursor: 筛选条件
         :param count: 数量
-        :param return_dict: 是否返回字典格式
-        :param fetch: 是否请求
+        :param kwargs return_dict: 是否返回字典格式
+        :param kwargs fetch: 是否请求
         :return:
         """
         url = self.UserTweets
@@ -318,16 +325,16 @@ class TwitterApi(TwitterLogin, ExtractorApi):
             'withNonLegacyCard': True,
             'withBirdwatchPivots': False
         })}
-        return self.selector(url, params, return_dict, fetch)
+        return self.selector(url=url, params=params, **kwargs)
 
-    def API_UserTweetsAndReplies(self, rest_id, cursor=None, count=20, return_dict=True, fetch=True) -> dict:
+    def API_UserTweetsAndReplies(self, rest_id, cursor=None, count=20, **kwargs) -> dict:
         """
         推文和回复
         :param rest_id: 用户id
         :param cursor: 筛选条件
         :param count: 数量
-        :param return_dict: 是否返回字典格式
-        :param fetch: 是否请求
+        :param kwargs return_dict: 是否返回字典格式
+        :param kwargs fetch: 是否请求
         :return:
         """
         url = self.UserTweetsAndReplies
@@ -344,4 +351,4 @@ class TwitterApi(TwitterLogin, ExtractorApi):
             'withVoice': False,
             'withNonLegacyCard': True,
             'withBirdwatchPivots': False})}
-        return self.selector(url, params, return_dict, fetch)
+        return self.selector(url=url, params=params, **kwargs)

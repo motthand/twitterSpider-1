@@ -40,7 +40,7 @@ class SpiderAPI(TwitterApi, ExtractorApi):
         end_prompt = doc[1].strip()
         return start_prompt, end_prompt
 
-    def follow_judge(self, rest_id, cursor, count, over, return_dict, fetch, redis_name, api):
+    def follow_judge(self, rest_id, cursor, redis_name, api, **kwargs):
         """
         获取推特用户信息的方法
         :param rest_id: 用户id
@@ -53,13 +53,17 @@ class SpiderAPI(TwitterApi, ExtractorApi):
         :param api: 需要使用的API接口
         :return:
         """
+        rest_id = self.user_id if rest_id is None else rest_id
+        self.user_id = rest_id
+        count = kwargs.get('count', 20)
+        over = kwargs.get('over', True)
+        return_dict = kwargs.get('return_dict', True)
+        fetch = kwargs.get('fetch', True)
+
         current = inspect.currentframe()
         getouter = inspect.getouterframes(current, 2)
         callback = getattr(self, getouter[1][3])
         start_prompt, end_prompt = self.doc_info(callback)
-
-        rest_id = self.user_id if rest_id is None else rest_id
-        self.user_id = rest_id
 
         # 获取数据
         resp = api(rest_id=rest_id, cursor=cursor, count=count, return_dict=return_dict, fetch=fetch)
@@ -86,17 +90,32 @@ class SpiderAPI(TwitterApi, ExtractorApi):
         cursor = self.find_first_data(resp, 'value')
         callback(cursor=cursor)
 
-    def user_judge(self, rest_id, cursor, count, over, return_dict, fetch, redis_name, api):
-        """获取推主动态的方法"""
+    def user_judge(self, rest_id, cursor, redis_name, api, **kwargs):
+        """
+        获取推主动态的方法
+        :param rest_id: 用户id
+        :param cursor: 筛选条件
+        :param count: 数量
+        :param over: 是否覆盖保存的数据
+        :param return_dict: 是否返回字典格式
+        :param fetch: 是否请求
+        :param redis_name: redis数据名
+        :param api: 需要使用的API接口
+        :return:
+        """
+        rest_id = self.user_id if rest_id is None else rest_id
+        self.user_id = rest_id
+        count = kwargs.get('count', 20)
+        over = kwargs.get('over', True)
+        return_dict = kwargs.get('return_dict', True)
+        fetch = kwargs.get('fetch', True)
+
         curframe = inspect.currentframe()
         calframe = inspect.getouterframes(curframe, 2)
         callback = getattr(self, calframe[1][3])
         start_prompt, end_prompt = self.doc_info(callback)
 
-        rest_id = self.user_id if rest_id is None else rest_id
-        self.user_id = rest_id
-
-        resp = api(rest_id, cursor, count, return_dict, fetch)
+        resp = api(rest_id=rest_id, cursor=cursor, count=count, return_dict=return_dict, fetch=fetch)
 
         # 检查是否提取完毕
         if not self.find_exists(resp, 'tweet'):
@@ -130,39 +149,40 @@ class SpiderAPI(TwitterApi, ExtractorApi):
         cursor = self.find_last_data(resp, 'value')
         callback(cursor=cursor)
 
-    def getOne_Following(self, rest_id=None, cursor=None, count=20, over=True, return_dict=True, fetch=True):
+    def getOne_Following(self, rest_id=None, cursor=None, **kwargs):
         """
         获取单个用户所有正在关注信息
         默认获取自己
         :param rest_id: 用户id
         :param cursor: 筛选条件
-        :param count: 数量
-        :param over: 是否覆盖保存的数据
-        :param return_dict: 是否返回字典格式
-        :param fetch: 是否请求
+        :param kwargs count: 数量
+        :param kwargs over: 是否覆盖保存的数据
+        :param kwargs return_dict: 是否返回字典格式
+        :param kwargs fetch: 是否请求
         :return:
         """
+        redis_name = self.spider_redis.redis_Following
+        api = self.API_Following
+        self.follow_judge(rest_id=rest_id, cursor=cursor, redis_name=redis_name, api=api, **kwargs)
 
-        self.follow_judge(rest_id=rest_id, cursor=cursor, count=count, over=over, return_dict=return_dict,
-                          fetch=fetch, redis_name=self.spider_redis.redis_Following, api=self.API_Following)
-
-    def getOne_Followers(self, rest_id=None, cursor=None, count=20, over=True, return_dict=True, fetch=True):
+    def getOne_Followers(self, rest_id=None, cursor=None, **kwargs):
         """
         获取单个人所有关注者信息
         默认获取自己
         :param rest_id: 用户id
         :param cursor: 筛选条件
-        :param count: 数量
-        :param over: 是否覆盖保存的数据
-        :param return_dict: 是否返回字典格式
-        :param fetch: 是否请求
+        :param kwargs count: 数量
+        :param kwargs over: 是否覆盖保存的数据
+        :param kwargs return_dict: 是否返回字典格式
+        :param kwargs fetch: 是否请求
         :return:
         :return:
         """
-        self.follow_judge(rest_id=rest_id, cursor=cursor, count=count, over=over, return_dict=return_dict,
-                          fetch=fetch, redis_name=self.spider_redis.redis_Follower, api=self.API_Followers)
+        redis_name = self.spider_redis.redis_Follower
+        api = self.API_Followers
+        self.follow_judge(rest_id=rest_id, cursor=cursor, redis_name=redis_name, api=api, **kwargs)
 
-    def getOne_FollowersYouKnow(self, rest_id=None, cursor=None, count=20, over=True, return_dict=True, fetch=True):
+    def getOne_FollowersYouKnow(self, rest_id=None, cursor=None, **kwargs):
         """
         获取单个人认识的推特主
         默认获取自己
@@ -174,11 +194,11 @@ class SpiderAPI(TwitterApi, ExtractorApi):
         :param fetch: 是否请求
         :return:
         """
-        self.follow_judge(rest_id=rest_id, cursor=cursor, count=count, over=over, return_dict=return_dict,
-                          fetch=fetch, redis_name=self.spider_redis.redis_FollowersYouKnow,
-                          api=self.API_FollowersYouKnow)
+        redis_name = self.spider_redis.redis_FollowersYouKnow
+        api = self.API_FollowersYouKnow
+        self.follow_judge(rest_id=rest_id, cursor=cursor, redis_name=redis_name, api=api, **kwargs)
 
-    def getOne_UserMedia(self, rest_id=None, cursor=None, count=20, return_dict=True, fetch=True, over=True):
+    def getOne_UserMedia(self, rest_id=None, cursor=None, **kwargs):
         """
         获取单人所有媒体
         获取该用户的媒体信息
@@ -190,38 +210,41 @@ class SpiderAPI(TwitterApi, ExtractorApi):
         :param fetch: 是否请求
         :return:
         """
-        self.user_judge(rest_id, cursor, count, over, return_dict, fetch, redis_name=self.spider_redis.redis_UserMedia,
-                        api=self.API_UserMedia)
+        redis_name = self.spider_redis.redis_UserMedia
+        api = self.API_UserMedia
+        self.user_judge(rest_id=rest_id, cursor=cursor, redis_name=redis_name, api=api, **kwargs)
 
-    def getOne_Likes(self, rest_id=None, cursor=None, count=20, return_dict=True, fetch=True, over=True):
+    def getOne_Likes(self, rest_id=None, cursor=None, **kwargs):
         """
         获取单个推特主所有喜欢
         获取该用户的喜欢信息
         :param rest_id: 用户id
         :param cursor: 筛选条件
-        :param count: 数量
-        :param over: 是否覆盖保存的数据
-        :param return_dict: 是否返回字典格式
-        :param fetch: 是否请求
+        :param kwargs count: 数量
+        :param kwargs over: 是否覆盖保存的数据
+        :param kwargs return_dict: 是否返回字典格式
+        :param kwargs fetch: 是否请求
         :return:
         """
-        self.user_judge(rest_id, cursor, count, over, return_dict, fetch, redis_name=self.spider_redis.redis_UserLikes,
-                        api=self.API_UserLikes)
+        redis_name = self.spider_redis.redis_UserLikes
+        api = self.API_UserLikes
+        self.user_judge(rest_id=rest_id, cursor=cursor, redis_name=redis_name, api=api, **kwargs)
 
-    def getOne_UserTweets(self, rest_id=None, cursor=None, count=20, return_dict=True, fetch=True, over=True):
+    def getOne_UserTweets(self, rest_id=None, cursor=None, **kwargs):
         """
         获取单个用户所有推文信息
         获取该用户的推文信息
         :param rest_id: 用户id
         :param cursor: 筛选条件
-        :param count: 数量
-        :param over: 是否覆盖保存的数据
-        :param return_dict: 是否返回字典格式
-        :param fetch: 是否请求
+        :param kwargs count: 数量
+        :param kwargs over: 是否覆盖保存的数据
+        :param kwargs return_dict: 是否返回字典格式
+        :param kwargs fetch: 是否请求
         :return:
         """
-        self.user_judge(rest_id, cursor, count, over, return_dict, fetch, redis_name=self.spider_redis.redis_UserTweets,
-                        api=self.API_UserTweets)
+        redis_name = self.spider_redis.redis_UserTweets
+        api = self.API_UserTweets
+        self.user_judge(rest_id=rest_id, cursor=cursor, redis_name=redis_name, api=api, **kwargs)
 
 
 if __name__ == '__main__':
@@ -229,7 +252,6 @@ if __name__ == '__main__':
     # t.getOne_Following()
     # t.getOne_Followers()
     # t.getOne_FollowersYouKnow()
-
     # t.getOne_UserMedia()
     # t.getOne_Likes()
     # t.getOne_UserTweets()
