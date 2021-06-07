@@ -66,34 +66,35 @@ class BaseRedis(ConnectionRedisPool):
                 self.redis_hset(redis_name, redis_key, data)
 
 
-class SpiderRedis(BaseRedis):
+class TwitterRedis(BaseRedis):
+    # rest_id 为用户id
+    spider_Following = "Following"
+    spider_Follower = "Follower"
+    spider_FollowersYouKnow = "FollowersYouKnow"
 
-    def __init__(self):
-        super(SpiderRedis, self).__init__()
-        self._spider_Following = "Following"
-        self._spider_Follower = "Follower"
-        self._spider_FollowersYouKnow = "FollowersYouKnow"
-        self._spider_UserMedia = "UserMedia"
-        self._spider_UserLikes = "UserLikes"
-        self._spider_UserTweets = "UserTweets"
+    # rest_id 为用户id_内容id
+    spider_UserMedia = "UserMedia"
+    spider_UserLikes = "UserLikes"
+    spider_UserTweets = "UserTweets"
 
-        _analysis = 'analysis_'
-        _analysis_userInfo = f"{_analysis}userInfo"
+    _analysis_userInfo = "analysis_userInfo"
+    _analysis_Info = "analysis_dataInfo"
+    _analysis_downloadInfo = "analysis_downloadInfo"
 
-        self.redis_name_item = {
-            "spider_analysis_info": {
-                self._spider_Following: _analysis_userInfo,
-                self._spider_Follower: _analysis_userInfo,
-                self._spider_FollowersYouKnow: _analysis_userInfo,
+    redis_name_item = {
+        "spider_analysis_info": {
+            spider_Following: _analysis_userInfo,
+            spider_Follower: _analysis_userInfo,
+            spider_FollowersYouKnow: _analysis_userInfo,
 
-            },
-            "spider_analysis": {
-                self._spider_UserMedia: _analysis + self._spider_UserMedia,
-                self._spider_UserLikes: _analysis + self._spider_UserLikes,
-                self._spider_UserTweets: _analysis + self._spider_UserTweets,
-            }
+        },
+        "spider_analysis": {
+            spider_UserMedia: _analysis_Info,
+            spider_UserLikes: _analysis_Info,
+            spider_UserTweets: _analysis_Info,
         }
+    }
 
 
 if __name__ == '__main__':
-    s = SpiderRedis()
+    s = TwitterRedis()

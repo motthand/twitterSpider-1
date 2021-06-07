@@ -16,7 +16,7 @@ from api.twitter import TwitterApi
 from extractor.extractor import ExtractorApi
 from utils.exception import TSException
 from utils.logger import logger
-from utils.twitter_redis import SpiderRedis
+from utils.twitter_redis import TwitterRedis
 
 
 class SpiderAPI(TwitterApi, ExtractorApi):
@@ -26,7 +26,7 @@ class SpiderAPI(TwitterApi, ExtractorApi):
 
     def __init__(self):
         super(SpiderAPI, self).__init__()
-        self.spider_redis = SpiderRedis()
+        self.spider_redis = TwitterRedis()
         self.redis = self.spider_redis.redis
         self.num = 1
 
@@ -134,6 +134,7 @@ class SpiderAPI(TwitterApi, ExtractorApi):
 
         # 检查是否提取完毕
         if not self.find_exists(resp, 'tweet'):
+            self.num += 1
             return
 
         # 获取数据来源
@@ -144,6 +145,7 @@ class SpiderAPI(TwitterApi, ExtractorApi):
 
         # 检查是否提取完毕
         if not tweet_list:
+            self.num += 1
             return
 
         user_list = self.find_all_data(tweet_list, 'user')
@@ -176,7 +178,7 @@ class SpiderAPI(TwitterApi, ExtractorApi):
         :param kwargs fetch: 是否请求
         :return:
         """
-        redis_name = self.spider_redis._spider_Following
+        redis_name = self.spider_redis.spider_Following
         api = self.API_Following
         self.follow_judge(rest_id=rest_id, cursor=cursor, redis_name=redis_name, api=api, **kwargs)
 
@@ -193,7 +195,7 @@ class SpiderAPI(TwitterApi, ExtractorApi):
         :return:
         :return:
         """
-        redis_name = self.spider_redis._spider_Follower
+        redis_name = self.spider_redis.spider_Follower
         api = self.API_Followers
         self.follow_judge(rest_id=rest_id, cursor=cursor, redis_name=redis_name, api=api, **kwargs)
 
@@ -209,7 +211,7 @@ class SpiderAPI(TwitterApi, ExtractorApi):
         :param fetch: 是否请求
         :return:
         """
-        redis_name = self.spider_redis._spider_FollowersYouKnow
+        redis_name = self.spider_redis.spider_FollowersYouKnow
         api = self.API_FollowersYouKnow
         self.follow_judge(rest_id=rest_id, cursor=cursor, redis_name=redis_name, api=api, **kwargs)
 
@@ -225,7 +227,7 @@ class SpiderAPI(TwitterApi, ExtractorApi):
         :param fetch: 是否请求
         :return:
         """
-        redis_name = self.spider_redis._spider_UserMedia
+        redis_name = self.spider_redis.spider_UserMedia
         api = self.API_UserMedia
         self.user_judge(rest_id=rest_id, cursor=cursor, redis_name=redis_name, api=api, **kwargs)
 
@@ -241,7 +243,7 @@ class SpiderAPI(TwitterApi, ExtractorApi):
         :param kwargs fetch: 是否请求
         :return:
         """
-        redis_name = self.spider_redis._spider_UserLikes
+        redis_name = self.spider_redis.spider_UserLikes
         api = self.API_UserLikes
         self.user_judge(rest_id=rest_id, cursor=cursor, redis_name=redis_name, api=api, **kwargs)
 
@@ -257,14 +259,14 @@ class SpiderAPI(TwitterApi, ExtractorApi):
         :param kwargs fetch: 是否请求
         :return:
         """
-        redis_name = self.spider_redis._spider_UserTweets
+        redis_name = self.spider_redis.spider_UserTweets
         api = self.API_UserTweets
         self.user_judge(rest_id=rest_id, cursor=cursor, redis_name=redis_name, api=api, **kwargs)
 
 
 if __name__ == '__main__':
     t = SpiderAPI()
-    # t.getOne_Following()
+    t.getOne_Following()
     # t.getOne_Followers()
     # t.getOne_FollowersYouKnow()
     # t.getOne_UserMedia()

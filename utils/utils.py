@@ -71,55 +71,44 @@ def twitter_conversion(times: list or str):
     return time_list
 
 
-def thread_pool(method=None, **kwargs):
+def thread_pool(method, data, **kwargs):
     """
     多线程任务
     :param method: 函数
-    :param kwargs: { kwrage:{data: 可遍历列表数据,thread_num: 线程数,prompt: 进度条提示}}
-                    or
-                    {data: 可遍历列表数据,thread_num: 线程数,prompt: 进度条提示}
+    :param data: 可遍历列表数据
+    :param kwargs:
     :return:
     """
     if len(kwargs) == 1:
         kwargs = kwargs.get('kwargs')
     if isinstance(kwargs, dict):
-        data = kwargs.get('data')
         thread_num = kwargs.get('thread_num', 1)
         prompt = kwargs.get('prompt', '多线程任务->[线程数:%s]' % thread_num)
     else:
         sys.exit('kwargs is not dict')
-    if method is None:
-        sys.exit('method is None')
-    if data is None:
-        sys.exit('data is None')
-    prompt = '多线程任务->[%s]->[线程数:%s]' % (prompt, thread_num)
+
+    prompt = '多线程任务->%s->[线程数:%s]' % (prompt, thread_num)
     with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
         res = tqdm.tqdm(executor.map(method, data), total=len(data))
         res.set_description(prompt)
         return len(list(res))
 
 
-def process_pool(method=None, **kwargs):
+def process_pool(method, data, **kwargs):
     """
     多进程任务
     :param method: 函数
-    :param kwargs: { kwrage:{data: 可遍历列表数据,thread_num: 进程数,prompt: 进度条提示}}
-                    or
-                    {data: 可遍历列表数据,thread_num: 进程数,prompt: 进度条提示}
-    :return:
+    :param data: 可遍历列表数据
+    :param kwargs: :return:
     """
     if len(kwargs) == 1:
         kwargs = kwargs.get('kwargs')
     if isinstance(kwargs, dict):
-        data = kwargs.get('data')
         thread_num = kwargs.get('thread_num', 1)
         prompt = kwargs.get('prompt', '多进程任务->[线程数:%s]' % thread_num)
     else:
         sys.exit('kwargs is not dict')
-    if method is None:
-        sys.exit('method is None')
-    if data is None:
-        sys.exit('data is None')
+
     prompt = '多进程任务->[%s]->[线程数:%s]' % (prompt, thread_num)
     with futures.ProcessPoolExecutor(max_workers=thread_num) as executor:
         res = tqdm.tqdm(executor.map(method, data), total=len(data))

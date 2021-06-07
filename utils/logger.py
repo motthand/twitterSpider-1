@@ -16,7 +16,7 @@ import sys
 DEFAULT_LOG_LEVEL = logging.INFO  # 默认等级
 DEFAULT_LOG_FMT = '%(asctime)s %(filename)s [line:%(lineno)d] %(levelname)s: %(message)s'  # 默认日志格式
 DEFAULT_LOG_DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'  # 默认时间格式
-DEFAULT_LOG_FILENAME = 'request_1_2.bin'  # 默认日志文件名称
+DEFAULT_LOG_FILENAME = 'request_1_2.log'  # 默认日志文件名称
 
 
 class Logger:

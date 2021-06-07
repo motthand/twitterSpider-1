@@ -32,7 +32,7 @@ class TwitterSpider(SpiderAPI):
         # self.getOne_Following()
 
         # 读取关注的人
-        for user_id, item in self.iter_get_all(name=self.spider_redis.redis_Following):
+        for user_id, item in self.iter_get_all(name=self.spider_redis.spider_Following):
             name = self.find_first_data(item, 'name')
             screen_name = self.find_first_data(item, 'screen_name')
             logger.info(f"开始获取【{user_id}——{screen_name}——{name}】的信息")
@@ -65,4 +65,4 @@ class TwitterSpider(SpiderAPI):
 
 if __name__ == '__main__':
     t = TwitterSpider()
-    # t.getMyFollowing()
+    t.getMyFollowing()

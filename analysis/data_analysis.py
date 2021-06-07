@@ -15,11 +15,11 @@ import json
 from extractor.extractor import ExtractorApi
 from extractor.json_path_finder import JsonDataFinder
 from utils.logger import logger
-from utils.twitter_redis import SpiderRedis
+from utils.twitter_redis import TwitterRedis
 from utils.utils import twitter_conversion
 
 
-class BaseAnalysis(SpiderRedis, ExtractorApi):
+class BaseAnalysis(TwitterRedis, ExtractorApi):
     def __init__(self):
         super(BaseAnalysis, self).__init__()
 
@@ -134,43 +134,22 @@ class BaseExtract(BaseAnalysis):
         :return:
         """
         user_info = {
-            "昵称": self.find_first_data(data, 'name'),
-            "账号": self.find_first_data(data, 'screen_name'),
-            "地址": self.find_first_data(data, 'location'),
-            "推特注册时间": twitter_conversion(self.find_first_data(data, 'created_at')),
-            "正在关注": self.find_first_data(data, 'friends_count'),
-            "关注者": self.find_first_data(data, 'followers_count'),
-            "媒体数": self.find_first_data(data, 'media_count'),
-            "普通关注者": self.find_first_data(data, 'normal_followers_count'),
-            "描述": self.find_first_data(data, 'description'),
-            "个人资料横幅网址": self.find_first_data(data, 'profile_banner_url'),
-            "头像": self.find_first_data(data, 'profile_image_url_https'),
+            "name": self.find_first_data(data, 'name'),
+            "screen_name": self.find_first_data(data, 'screen_name'),
+            "location": self.find_first_data(data, 'location'),
+            "created_at": twitter_conversion(self.find_first_data(data, 'created_at')),
+            "friends_count": self.find_first_data(data, 'friends_count'),
+            "followers_count": self.find_first_data(data, 'followers_count'),
+            "favourites_count": self.find_first_data(data, 'favourites_count'),
+            "media_count": self.find_first_data(data, 'media_count'),
+            "description": self.find_first_data(data, 'description'),
+            "profile_banner_url": self.find_first_data(data, 'profile_banner_url'),
+            "profile_image_url_https": self.find_first_data(data, 'profile_image_url_https'),
             "entities": self.entities(data),
         }
         return user_info
 
-    def extract_userMediaInfo(self, data):
-        """
-        提取用户媒体信息
-        数据在legacy下
-        :param finder:
-        :return:
-        """
-
-        info = {
-            "user_id_str": self.find_first_data(data, 'user_id_str'),
-            "conversation_id_str": self.find_first_data(data, 'conversation_id_str'),
-            "created_at": twitter_conversion(self.find_first_data(data, 'created_at')),
-            "full_text": self.find_first_data(data, 'full_text'),
-            "favorite_count": self.find_first_data(data, 'favorite_count'),
-            "reply_count": self.find_first_data(data, 'reply_count'),
-            "retweet_count": self.find_first_data(data, 'retweet_count'),
-            "source": self.find_first_data(data, 'source'),
-            "entities": self.entities(data),
-        }
-        return info
-
-    def extract_userLikesInfo(self, data):
+    def extract_dataInfo(self, data):
         """
         提取用户喜欢信息
         :return:
@@ -185,100 +164,65 @@ class BaseExtract(BaseAnalysis):
             "retweet_count": self.find_first_data(data, 'retweet_count'),
             "source": self.find_first_data(data, 'source'),
             "lang": self.find_first_data(data, 'lang'),
-            "media_info": {
-                "entities": self.entities(data),
-                "extended_entities": self.extended_entities(data),
-            }
+            "entities": self.entities(data),
+            "extended_entities": self.extended_entities(data),
         }
         return info
 
 
 class DataExtract(BaseExtract):
 
-    def get_UserInfo(self, name, new_name, **kwargs):
-        """
-        获取推特用户信息
-        :param name: 读取的redis库
-        :param new_name: 写入的redis库
-        :return:
-        """
-        for rest_id, item in self.iter_get_all(name):
-            # rest_id为当前数据库信息id
-            # 重新获取rest_id
-            only_key = self.find_first_data(item, 'rest_id')
+    def _UserInfo(self, data):
+        rest_id, item, new_name, kwargs = data
+        # rest_id为当前数据库信息id
+        # 重新获取rest_id
+        only_key = self.find_first_data(item, 'rest_id')
 
-            info = {
-                only_key: self.extract_userInfo(item)
-            }
-            effective = any([True if item else False for key, item in info[only_key].items()])
-            if effective:
-                self.execute(redis_name=new_name, redis_key=only_key, data=info, **kwargs)
-                logger.info(f"获取推特用户信息成功：{info}")
+        info = {
+            only_key: self.extract_userInfo(item)
+        }
+        effective = any([True if item else False for key, item in info[only_key].items()])
+        if effective:
+            self.execute(redis_name=new_name, redis_key=only_key, data=info, **kwargs)
+            logger.info(f"获取推特用户信息成功：{info}")
 
-    def get_UserLikesInfo(self, name, new_name, **kwargs):
-        """
-        提取用户喜欢信息
-        """
-        for num, (rest_id, item) in enumerate(self.iter_get_all(name)):
-            item = json.loads(item)
-            if not isinstance(item, dict):
-                continue
-
-            rest_id = item.get('rest_id')
-
-            owner_finder = self.find_first_data(item, 'user')
-            legacy = self.find_last_data(item, 'legacy')
-
-            if owner_finder and legacy:
-                info = {
-                    'rest_id': rest_id,
-                    "UserInfo": self.extract_userInfo(owner_finder),
-                    "userLikesInfo": self.extract_userLikesInfo(legacy),
-                }
-                self.execute(redis_name=new_name, redis_key=rest_id, data=info, **kwargs)
-                logger.info(f"获取推特用户喜欢成功：{info}")
-
-    def get_UserMediaInfo(self, name, new_name, **kwargs):
-        """
-        提取用户媒体信息
-        :param name:
-        :param new_name:
-        :param kwargs over:
-        :return:
-        """
-        for num, (rest_id, item) in enumerate(self.iter_get_all(name)):
-            item = json.loads(item)
-            if not isinstance(item, dict):
-                continue
-
+    def _dataInfo(self, data):
+        rest_id, item, new_name, kwargs = data
+        item = json.loads(item)
+        if isinstance(item, dict):
             owner = self.find_first_data(item, 'user')
             legacy = self.find_last_data(item, 'legacy')
-
             if owner and legacy:
                 info = {
                     "rest_id": rest_id,
                     "UserInfo": self.extract_userInfo(owner),
-                    "userMediaInfo": self.extract_userMediaInfo(legacy)
+                    "dataInfo": self.extract_dataInfo(legacy)
                 }
                 self.execute(redis_name=new_name, redis_key=rest_id, data=info, **kwargs)
-                logger.info(f"提取用户媒体信息成功：{info}")
+                logger.info(f"提取用户数据成功：{info}")
 
+    def _downloadInfo(self,data):
+        rest_id, item, new_name, kwargs = data
+        data_info = {
+            "rest_id": self.find_first_data(item, 'rest_id'),
+            "name": self.find_first_data(item, 'name'),
+            "screen_name": self.find_first_data(item, 'screen_name'),
+        }
+        # 视频
+        video_info = self.find_all_data(item, 'video_info')
+        if video_info and any(video_info):
+            video = [_ for video in video_info if video for _ in self.find_all_data(video, 'variants')]
+            data_info.update({"video_info": video})
+        else:
+            data_info.update({"video_info": []})
 
-class DataAnalysis(DataExtract):
+        # 图片
+        url_list = self.find_all_data(item, 'media_url_https')
+        img_list = [url for url in url_list if url.endswith('.jpg')] if url_list else []
+        data_info.update({"img_info": img_list})
 
-    def get_allTwitterInfo(self):
-        """获取所有推特用户信息"""
-        # for spider, analysis in self.redis_name_item.get('spider_analysis_info').items():
-        #     logger.info(f"[用户信息]正在处理redis数据库并获取:{spider} {analysis}")
-        #     self.get_UserInfo(name=spider, new_name=analysis)
+        # 语音
 
-        for spider, analysis in self.redis_name_item.get('spider_analysis').items():
-            logger.info(f"[喜欢数据]正在处理redis数据库并获取:{spider} {analysis}")
-            self.get_UserLikesInfo(name=spider, new_name=analysis)
-            logger.info(f"[媒体数据]正在处理redis数据库并获取:{spider} {analysis}")
-            self.get_UserMediaInfo(name=spider, new_name=analysis)
-            logger.info(f"[推文数据]正在处理redis数据库并获取:{spider} {analysis}")
+        self.execute(redis_name=new_name, redis_key=rest_id, data=data_info, **kwargs)
+        logger.info(f"提取用户数据成功：{data_info}")
 
-if __name__ == '__main__':
-    d = DataAnalysis()
-    d.get_allTwitterInfo()
