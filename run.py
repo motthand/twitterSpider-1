@@ -12,8 +12,44 @@
 """
 from api.spider import SpiderAPI
 from download.download import Download
+from utils.email import Email
 from utils.logger import logger
-from utils.utils import thread_pool, send_email
+from utils.utils import thread_pool
+
+
+class TimingMonitoring(object):
+    """计时监控"""
+
+    def __init__(self, function, prompt):
+        import time
+        from datetime import datetime
+        self.prompt = prompt
+        start_localtime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        start_time = int(time.time())
+        function()
+        end_time = int(time.time())
+        end_localtime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        logger.info(f"[爬虫结束]: [{end_localtime} -> {start_localtime}] 耗时：{self.sec_to_data(end_time - start_time)}")
+
+    def convert_time_to_str(self, time):
+        # 时间数字转化成字符串，不够10的前面补个0
+        if (time < 10):
+            time = '0' + str(time)
+        else:
+            time = str(time)
+        return time
+
+    def sec_to_data(self, y):
+        h = int(y // 3600 % 24)
+        d = int(y // 86400)
+        m = int((y % 3600) // 60)
+        s = round(y % 60, 2)
+        h = self.convert_time_to_str(h)
+        m = self.convert_time_to_str(m)
+        s = self.convert_time_to_str(s)
+        d = self.convert_time_to_str(d)
+        # 天 小时 分钟 秒
+        return d + ":" + h + ":" + m + ":" + s
 
 
 class BaseSpider(SpiderAPI):
@@ -67,12 +103,10 @@ class BaseSpider(SpiderAPI):
 
 class TwitterSpider(BaseSpider):
 
-    def __init__(self):
-        super(TwitterSpider, self).__init__()
-        self.data = None
-
     def initFollowingData(self):
-        for num, (user_id, item) in enumerate(self.data,start=1):
+        match = f'{self.user_id}_*' if self.level == 1 else None
+        data = self.iter_get_all(name=self.spider_redis.spider_Following, match=match)
+        for num, (user_id, item) in enumerate(data, start=1):
             user_id = str(user_id).split("_")[-1] if self.level == 1 else user_id
             name = self.find_first_data(item, 'name')
             screen_name = self.find_first_data(item, 'screen_name')
@@ -93,23 +127,24 @@ class TwitterSpider(BaseSpider):
                         thread_num=self.thread)
 
     def run_spider(self):
+        """爬取信息"""
         logger.info("开始运行...")
-        # 获取关注的人
-        print("获取关注的人...")
         self.getOne_Following()  # 必须打开
-        # 爬取内容
-        match = f'{self.user_id}_*' if self.level == 1 else None
-        self.data = self.iter_get_all(name=self.spider_redis.spider_Following, match=match)
+        Email(title="爬取信息", content="[1/6]获取正在关注人信息成功")
         self.getFollowingData()
+        Email(title="爬取信息", content="[2/6]获取媒体信息成功")
 
     def run_extractor(self):
-        # 提取内容
+        """提取内容&提取下载信息"""
         self.get_allTwitterInfo()
-        # 提取下载信息
+        Email(title="提取内容", content="[3/6]提取内容信息成功")
         self.init_downloadInfo()
+        Email(title="提取下载信息", content="[4/6]提取下载信息成功")
 
     def run_download(self):
+        """下载数据"""
         self.rest_id_list.append(self.user_id)
+        Email(title="开始下载数据", content="[5/6]正在下载数据...")
         d = Download(rest_id_list=self.rest_id_list)
         d.run_download()
 
@@ -120,27 +155,20 @@ class TwitterSpider(BaseSpider):
 def main():
     import time
     t = TwitterSpider()
-    spider_wait = t.spider_wait * 60 * 60
-
     # 每当爬取完毕后 间隔spider_wait小时运行一次爬虫
+    spider_wait = t.spider_wait * 60 * 60
+    SPIDER_NUM = 1
     while True:
-        spider_start_time = int(time.time())
-        t.run_spider()
-        spider_end_time = int(time.time())
-        logger.info(f"爬虫耗时：{spider_end_time - spider_start_time}")
-
-        extractor_start_time = int(time.time())
-        t.run_extractor()
-        extractor_end_time = int(time.time())
-        logger.info(f"提取数据耗时：{extractor_start_time - extractor_end_time}")
-
-        download_start_time = int(time.time())
-        t.run_download()
-        download_end_time = int(time.time())
-        logger.info(f"下载耗时：{download_start_time - download_end_time}")
+        # 爬虫模块
+        TimingMonitoring(function=t.run_spider, prompt='爬虫')
+        # 提取模块
+        TimingMonitoring(function=t.run_extractor, prompt='提取')
+        # 下载模块
+        TimingMonitoring(function=t.run_download, prompt='下载')
+        Email(title="数据下载完成", content="[6/6]数据下载完成。\n已完成{}次爬虫，将等待{}小时再次爬取".format(SPIDER_NUM, spider_wait))
+        SPIDER_NUM += 1
 
         logger.info(f"开始等待：时间{spider_wait}")
-
         time.sleep(spider_wait)
 
     # 测试接口
@@ -148,7 +176,8 @@ def main():
 
 
 if __name__ == '__main__':
+    # main()
     try:
         main()
     except Exception as e:
-        send_email(e)
+        Email(title="爬虫被迫中断", content="Twitter爬虫异常", error=e)

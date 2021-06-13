@@ -17,7 +17,6 @@ from _md5 import md5
 from concurrent import futures
 from datetime import datetime
 from datetime import timezone, timedelta
-
 import psutil
 import tqdm
 
@@ -89,7 +88,8 @@ def thread_pool(method, data, **kwargs):
     else:
         sys.exit('kwargs is not dict')
 
-    prompt = '多线程任务 [线程数:%s]-> %s ->' % (thread_num, prompt)
+    ctime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    prompt = '[%s] 多线程任务 [线程数:%s]-> %s ->' % (ctime,thread_num, prompt)
     with futures.ThreadPoolExecutor(max_workers=thread_num) as executor:
         res = tqdm.tqdm(executor.map(method, data), total=len(data))
         res.set_description(prompt)
@@ -164,38 +164,11 @@ def StrOfSize(size):
     return ('{}.{:>03d} {}'.format(integer, remainder, units[level]))
 
 
-def send_email(error):
-    import smtplib
-    from smtplib import SMTP_SSL
-    from email.mime.text import MIMEText
-    from email.mime.multipart import MIMEMultipart
-    from email.header import Header
-    # from email.mime.application import MIMEApplication  # 用于添加附件
+def url_md5(url,params):
 
-    host_server = 'smtp.qq.com'  # qq邮箱smtp服务器
-    sender_qq = 'geektalk@qq.com'  # 发件人邮箱
-    pwd = 'fbsbergtirfebdfd'
-    receiver = '601872868@qq.com'
-    ctime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    mail_title = f'[{ctime}]Twitter爬虫异常'  # 邮件标题
+    lt = [k + '=' + str(v) for k, v in params.items()]
+    url = url + '?' + '&'.join(lt)
+    m = hashlib.md5(url.encode())
+    return m.hexdigest()
 
-    # 邮件正文内容
-    mail_content = f"<p>Twitter爬虫异常，错误信息如下：</p>\n\t{error}"
 
-    msg = MIMEMultipart()
-    msg["Subject"] = Header(mail_title, 'utf-8')
-    msg["From"] = sender_qq
-    msg["To"] = Header("Twitter爬虫", "utf-8")
-
-    msg.attach(MIMEText(mail_content, 'html'))
-
-    try:
-        smtp = SMTP_SSL(host_server)  # ssl登录连接到邮件服务器
-        smtp.set_debuglevel(0)  # 0是关闭，1是开启debug
-        smtp.ehlo(host_server)  # 跟服务器打招呼，告诉它我们准备连接，最好加上这行代码
-        smtp.login(sender_qq, pwd)
-        smtp.sendmail(sender_qq, receiver, msg.as_string())
-        smtp.quit()
-        print("邮件发送成功")
-    except smtplib.SMTPException:
-        print("无法发送邮件")

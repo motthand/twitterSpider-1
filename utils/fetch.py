@@ -18,6 +18,7 @@ from retrying import retry
 
 from init import ConfigAnalysis
 from utils.logger import logger
+from utils.utils import url_md5
 
 __info = ConfigAnalysis().load_fetch()
 retry_max_number = __info.get('retry_max_number')
@@ -71,14 +72,20 @@ def fetch(session, url, method='get', check_code=True, **kwargs):
         return resp
     except Exception as e:
         error_info = 'Something got wrong, error msg:{}'.format(e)
-        raise Exception(error_info)
+        info = {
+            "url": url,
+            "check_code": check_code,
+            "kwargs": kwargs,
+            "headers": session.headers,
+        }
+        raise Exception(error_info + "\n\n请求参数：" + str(info))
 
 
 def fetch_json(session, url, method='get', **kwargs):
     response = fetch(session, url, method, **kwargs)
-    response_json = json.loads(response.text)
-
-    return json.dumps(response_json, sort_keys=True, indent=3, ensure_ascii=False)
+    response_dict = json.loads(response.text)
+    response_dict['url_md5'] = url_md5(url, kwargs.get('params'))
+    return json.dumps(response_dict, sort_keys=True, ensure_ascii=False)
 
 
 def fetch_dict(session, url, method='get', **kwargs):

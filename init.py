@@ -15,9 +15,11 @@ from datetime import datetime
 from config import global_config
 from utils.exception import TSException
 
+
 class Init(object):
     # 项目启动时间
-    obj_start_time =  datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    obj_start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
 
 class ConfigAnalysis(Init):
 
@@ -49,6 +51,12 @@ class ConfigAnalysis(Init):
         self.count = _spider_info.get('count')
         self.thread = _spider_info.get('thread')
         self.spider_wait = _spider_info.get('spider_wait')
+
+        _email_info = self.load_email()
+        self.host_server = _email_info.get('host_server')
+        self.sender_qq = _email_info.get('sender_qq')
+        self.pwd = _email_info.get('pwd')
+        self.receiver = _email_info.get('receiver')
 
     def isdigit(self, parameter_name, parameter):
         if not parameter.isdigit():
@@ -130,6 +138,10 @@ class ConfigAnalysis(Init):
         return_info = {"level": level, "thread": thread, "over": over, "count": count, "spider_wait": spider_wait}
         return return_info
 
-
-if __name__ == '__main__':
-    ConfigAnalysis()
+    def load_email(self):
+        host_server = global_config.getRaw('email', 'host_server').strip()
+        sender_qq = global_config.getRaw('email', 'sender_qq').strip()
+        pwd = global_config.getRaw('email', 'pwd').strip()
+        receiver = global_config.getRaw('email', 'receiver').strip()
+        return_info = {"host_server": host_server, "sender_qq": sender_qq, "pwd": pwd, "receiver": receiver}
+        return return_info

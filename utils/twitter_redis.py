@@ -13,7 +13,7 @@
 
 import json
 
-from load_ini import ConfigAnalysis
+from init import ConfigAnalysis
 from utils.exception import TSException
 
 

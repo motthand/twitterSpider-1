@@ -13,10 +13,11 @@
 import functools
 import os
 import pickle
+
 import requests
 from DecryptLogin import login
 
-from load_ini import ConfigAnalysis
+from init import ConfigAnalysis
 from utils.logger import logger
 
 

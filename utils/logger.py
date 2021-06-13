@@ -11,11 +11,9 @@
 @Desc: 
 """
 import logging
-import sys
 import os
+import sys
 from datetime import datetime
-
-
 
 DEFAULT_LOG_LEVEL = logging.INFO  # 默认等级
 DEFAULT_LOG_FMT = '%(asctime)s %(filename)s [line:%(lineno)d] %(levelname)s: %(message)s'  # 默认日志格式

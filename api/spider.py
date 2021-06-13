@@ -11,12 +11,15 @@
 @Desc:
 """
 import inspect
+import sys
 
 from api.twitter import TwitterApi
 from extractor.extractor import DataAnalysis
 from utils.exception import TSException
 from utils.logger import logger
 from utils.twitter_redis import TwitterRedis
+
+sys.setrecursionlimit(10000)
 
 
 class SpiderAPI(TwitterApi, DataAnalysis):
@@ -65,7 +68,7 @@ class SpiderAPI(TwitterApi, DataAnalysis):
         get_outer = inspect.getouterframes(current, 2)
         function_name = get_outer[2][3]
         function = getattr(self, function_name)
-        return function,function_name
+        return function, function_name
 
     def follow_judge(self, rest_id, cursor, redis_name, api, **kwargs):
         """
@@ -86,7 +89,7 @@ class SpiderAPI(TwitterApi, DataAnalysis):
         return_dict, fetch = self.init_params(**kwargs)
         count, over = self.count, self.over
 
-        function,function_name = self.get_function()
+        function, function_name = self.get_function()
         start_prompt, end_prompt = self.doc_info(function)
 
         # 获取数据
@@ -100,7 +103,7 @@ class SpiderAPI(TwitterApi, DataAnalysis):
             self.num = 1
             return
 
-        for n, itemContent in enumerate(itemContents,start=1):
+        for n, itemContent in enumerate(itemContents, start=1):
             rest_id = self.find_first_data(itemContent, 'rest_id')
             name = self.find_first_data(itemContent, 'name')
             self.rest_id_list.append(rest_id)
@@ -111,7 +114,8 @@ class SpiderAPI(TwitterApi, DataAnalysis):
             # 保存数据
             self.spider_redis.execute(redis_name=redis_name, redis_key=redis_key, data=itemContent, over=over)
 
-            logger.info(f"Success {start_prompt} [{self.user_id}]: [{self.num}][{n}/{len(itemContents)}] {rest_id}->{name}")
+            logger.info(
+                f"Success {start_prompt} [{self.user_id}]: [{self.num}][{n}/{len(itemContents)}] {rest_id}->{name}")
             self.num += 1
 
         cursor = self.find_first_data(resp, 'value')
@@ -134,7 +138,7 @@ class SpiderAPI(TwitterApi, DataAnalysis):
         self.user_id = rest_id
         return_dict, fetch = self.init_params(**kwargs)
         count, over = self.count, self.over
-        function,function_name = self.get_function()
+        function, function_name = self.get_function()
         start_prompt, end_prompt = self.doc_info(function)
 
         resp = api(rest_id=rest_id, cursor=cursor, count=count, return_dict=return_dict, fetch=fetch)
@@ -142,8 +146,14 @@ class SpiderAPI(TwitterApi, DataAnalysis):
 
         # 检查是否已经下载
         have_only_name = f"{self.spider_have}_{function_name}"
-        have_only_key = f"{rest_id}_{cursor}"
-        if self.redis.hexists(name=have_only_name,key=have_only_key):
+        # have_only_key = f"{rest_id}_{cursor}"
+        if isinstance(resp, dict):
+            have_only_key = resp.get('url_md5')
+        else:
+            import json
+            have_only_key = json.loads(resp).get('url_md5')
+
+        if self.redis.hexists(name=have_only_name, key=have_only_key) and self.num != 1:
             self.num = 1
             return
 
@@ -186,7 +196,7 @@ class SpiderAPI(TwitterApi, DataAnalysis):
         twitter_rest_ids = self.check_type_is_list(self.find_all_last_data(new_tweet_list, 'rest_id'))
 
         zip_data = zip(user_rest_ids, twitter_rest_ids, new_tweet_list)
-        for n, (user_rest_id, twitter_rest_id, tweet) in enumerate(zip_data,start=1):
+        for n, (user_rest_id, twitter_rest_id, tweet) in enumerate(zip_data, start=1):
             # 保存数据
             only_key = f'{user_rest_id}_{twitter_rest_id}'
             self.spider_redis.execute(redis_name=redis_name, redis_key=only_key, data=tweet, over=over)
@@ -195,7 +205,8 @@ class SpiderAPI(TwitterApi, DataAnalysis):
             self.num += 1
 
         # 存储下载信息
-        self.spider_redis.execute(redis_name=have_only_name, redis_key=have_only_key, data=new_tweet_list, over=over)
+        data = {"new_tweet_list": new_tweet_list, "count": len(new_tweet_list)}
+        self.spider_redis.execute(redis_name=have_only_name, redis_key=have_only_key, data=data, over=over)
 
         function(cursor=cursor)
 
@@ -321,21 +332,21 @@ class SpiderAPI(TwitterApi, DataAnalysis):
         import json
         # redis_name = self.spider_redis.spider_Home
         resp = self.API_home(cursor='HBbO/v/ro8yr+SYAAA==')
-        with open("2.json",'w')as f:
-            f.write(json.dumps(resp,ensure_ascii=False))
+        with open("2.json", 'w')as f:
+            f.write(json.dumps(resp, ensure_ascii=False))
         # self.spider_redis.execute(redis_name=redis_name, redis_key='only_key', data=resp, over=True)
         # self.spider_redis.execute(redis_name=redis_name, redis_key='tweets', data=tweets, over=True)
 
-        with open("1.json",'r')as f:
+        with open("1.json", 'r')as f:
             resp = f.read()
 
-        users = self.find_all_data(resp,'users')
-        id_str_list = self.find_all_data(users,'id_str')
-        print("用户：",len(id_str_list))
+        users = self.find_all_data(resp, 'users')
+        id_str_list = self.find_all_data(users, 'id_str')
+        print("用户：", len(id_str_list))
 
-        tweets = self.find_all_data(resp,'tweets')
-        user_id_str_list = self.find_all_data(tweets,'user_id_str')
-        print("推文用户：",len(user_id_str_list))
+        tweets = self.find_all_data(resp, 'tweets')
+        user_id_str_list = self.find_all_data(tweets, 'user_id_str')
+        print("推文用户：", len(user_id_str_list))
 
         a = list()
         for user in id_str_list:
@@ -343,6 +354,3 @@ class SpiderAPI(TwitterApi, DataAnalysis):
                 if tweet == user:
                     a.append(tweet)
         print(len(a))
-
-
-
