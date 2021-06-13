@@ -13,19 +13,11 @@
 
 import json
 
-from config import global_config
+from load_ini import ConfigAnalysis
 from utils.exception import TSException
 
 
-class ConnectionRedisPool(object):
-
-    def __init__(self):
-        self.redis_pass = global_config.getRaw('redis', 'redis_pass')
-        if self.redis_pass == 'None':
-            self.redis_pass = eval(self.redis_pass)
-        self.redis_host = global_config.getRaw('redis', 'redis_host')
-        self.redis_port = global_config.getRaw('redis', 'redis_port')
-        self.db = global_config.getRaw('redis', 'DB')
+class ConnectionRedisPool(ConfigAnalysis):
 
     def connection(self):
         import redis
@@ -71,6 +63,7 @@ class TwitterRedis(BaseRedis):
     spider_Following = "Following"
     spider_Follower = "Follower"
     spider_FollowersYouKnow = "FollowersYouKnow"
+    spider_Home = "Home"
 
     # rest_id 为用户id_内容id
     spider_UserMedia = "UserMedia"
@@ -95,6 +88,5 @@ class TwitterRedis(BaseRedis):
         }
     }
 
-
-if __name__ == '__main__':
-    s = TwitterRedis()
+    # 已经爬取的信息存储位置
+    spider_have = f'CacheInfo'

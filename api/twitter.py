@@ -13,21 +13,17 @@
 import json
 
 from api.login import TwitterLogin
-from extractor.extractor import ExtractorApi
 from utils.fetch import fetch_dict, fetch_json
-from utils.logger import logger
 
 
-class TwitterApi(TwitterLogin, ExtractorApi):
+class TwitterApi(TwitterLogin):
     """
     推特API接口
     """
 
     def __init__(self, mode='mobile'):
         super(TwitterApi, self).__init__()
-        self._login()
         self.init_url(mode)
-        self.user_id = self.API_Notifications()
 
     def init_url(self, mode):
         """
@@ -54,6 +50,7 @@ class TwitterApi(TwitterLogin, ExtractorApi):
         self.UserTweetsAndReplies = self.base_url + "i/api/graphql/Kq7XqqyDGn4Ly7Yh0AhK9w/UserTweetsAndReplies"
         self.FollowersYouKnow = self.base_url + "i/api/graphql/Vitbmqp6_6fOiDatDzbOAQ/FollowersYouKnow"
         self.UserByScreenNameWithoutResults = self.base_url + "i/api/graphql/Vf8si2dfZ1zmah8ePYPjDQ/UserByScreenNameWithoutResults"
+        self.home = self.base_url + "i/api/2/timeline/home.json"
 
     def fetch_dict(self, url, method='get', session=None, **kwargs):
         session = self.session if session is None else session
@@ -135,29 +132,7 @@ class TwitterApi(TwitterLogin, ExtractorApi):
             'tweet_mode': 'extended'
         }
         resp = self.fetch_dict(url, params=params)
-        finder = self.find_first_data(resp, 'users')
-        screen_names = self.find_all_data(finder, 'screen_name')
-        names = self.find_all_data(finder, 'name')
-        id_strs = self.find_all_data(finder, 'id_str')
-
-        print("在通知API中获取到了以下几个用户：")
-        for num, (name, id_str, screen_name) in enumerate(zip(names, id_strs, screen_names)):
-            print(f"\t{num} {name} {id_str} {screen_name}")
-
-        is_true = False
-        choose = None
-        while not is_true:
-            input_str = input("\n请输入前面的序号确认你的账户：")
-            if input_str.isdigit():
-                choose = int(input_str)
-                is_true = True
-            else:
-                print("请输入数字！")
-
-        items = {num: id_str for num, id_str in enumerate(id_strs)}
-        user_id = items[choose]
-        logger.info(f"本账号的user_id: {user_id}")
-        return user_id
+        return resp
 
     def API_Following(self, rest_id, cursor=None, count=20, **kwargs) -> dict:
         """
@@ -351,4 +326,38 @@ class TwitterApi(TwitterLogin, ExtractorApi):
             'withVoice': False,
             'withNonLegacyCard': True,
             'withBirdwatchPivots': False})}
+        return self.selector(url=url, params=params, **kwargs)
+
+    def API_home(self, rest_id=None, cursor=None, count=20, **kwargs) -> dict:
+        """刷推特"""
+        url = self.home
+        params = {
+            'include_profile_interstitial_type': '1',   # 包括配置文件插页式类型
+            'include_blocking': '1',    # 包括阻塞
+            'include_blocked_by': '1',  # 包括被阻止
+            'include_followed_by': '1', # 包括关注过的
+            'include_want_retweets': '1',   # 包括想要转发
+            'include_mute_edge': '1',   # 包括静音边缘
+            'include_can_dm': '1',
+            'include_can_media_tag': '1',   # 包括媒体标签
+            'skip_status': '1', # 跳过状态
+            'cards_platform': 'Web-12',
+            'include_cards': '1',
+            'include_ext_alt_text': True,
+            'include_quote_count': True,
+            'include_reply_count': '1',
+            'tweet_mode': 'extended',
+            'include_entities': True,
+            'include_user_entities': True,
+            'include_ext_media_color': True,
+            'include_ext_media_availability': True,
+            'send_error_codes': True,
+            'simple_quoted_tweet': True,
+            'earned': '1',
+            'count': count,
+            'lca': True,
+            'cursor': cursor,
+            'ext': 'mediaStats,highlightedLabel',
+        }
+
         return self.selector(url=url, params=params, **kwargs)

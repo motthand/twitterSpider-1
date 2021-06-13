@@ -12,11 +12,20 @@
 """
 import logging
 import sys
+import os
+from datetime import datetime
+
+
 
 DEFAULT_LOG_LEVEL = logging.INFO  # 默认等级
 DEFAULT_LOG_FMT = '%(asctime)s %(filename)s [line:%(lineno)d] %(levelname)s: %(message)s'  # 默认日志格式
 DEFAULT_LOG_DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'  # 默认时间格式
-DEFAULT_LOG_FILENAME = 'request_1_2.log'  # 默认日志文件名称
+DEFAULT_LOG_PATH = './log'
+
+now = datetime.now().strftime(DEFAULT_LOG_DATETIME_FORMAT)
+DEFAULT_LOG_FILENAME = os.path.join(DEFAULT_LOG_PATH, f'log_{now}.log')  # 默认日志文件名称
+if not os.path.exists(DEFAULT_LOG_PATH):
+    os.makedirs(DEFAULT_LOG_PATH)
 
 
 class Logger:
@@ -25,9 +34,9 @@ class Logger:
         if not self._logger.handlers:
             self.formatter = logging.Formatter(fmt=DEFAULT_LOG_FMT, datefmt=DEFAULT_LOG_DATETIME_FORMAT)
             # 设置文件日志模式
-            # self._logger.addHandler(self._get_file_handler(DEFAULT_LOG_FILENAME))
+            self._logger.addHandler(self._get_file_handler(DEFAULT_LOG_FILENAME))
             # 设置终端日志模式
-            self._logger.addHandler(self._get_console_handler())
+            # self._logger.addHandler(self._get_console_handler())
             # 设置日志等级
             self._logger.setLevel(DEFAULT_LOG_LEVEL)
 

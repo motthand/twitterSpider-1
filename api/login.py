@@ -16,26 +16,25 @@ import pickle
 import requests
 from DecryptLogin import login
 
-from config import global_config
+from load_ini import ConfigAnalysis
 from utils.logger import logger
 
-UserName = global_config.getRaw('config', 'username')
-PassWord = global_config.getRaw('config', 'password')
 
-
-class TwitterLogin(object):
+class TwitterLogin(ConfigAnalysis):
     is_login = False
     # 固定值
     authorization = "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
 
     def __init__(self):
-        self.session = requests.session()
+        super(TwitterLogin, self).__init__()
 
+        self.session = requests.session()
         self.cookies_dir_path = os.path.join(os.path.dirname(__file__), "cookie")
         if not os.path.exists(self.cookies_dir_path):
             os.makedirs(self.cookies_dir_path)
+        self.user_cookie_path = os.path.join(self.cookies_dir_path, f"{self.username}.cookies")
 
-        self.user_cookie_path = os.path.join(self.cookies_dir_path, f"{UserName}.cookies")
+        self._login()
 
     def check_login(func):
         """
@@ -80,7 +79,7 @@ class TwitterLogin(object):
         :return:
         """
         lg = login.Login()
-        infos_return, session, response_text = lg.twitter(UserName, PassWord)
+        infos_return, session, response_text = lg.twitter(self.username, self.password)
         return infos_return, session, response_text
 
     def login_by_cookie(self):

@@ -13,33 +13,24 @@
 import json
 import os
 import re
-from os.path import normpath
 
 import requests
-import tqdm
-import numpy as np
 
-from analysis.data_analysis import BaseAnalysis
-from config import global_config
-from extractor.json_path_finder import JsonDataFinder
+from extractor.extractor import BaseAnalysis
 from utils.fetch import fetch
+from utils.logger import logger
 from utils.utils import thread_pool
-from urllib.parse import urlunparse, urlparse
-
-DOWNLOAD_PATH = global_config.getRaw('download', 'download_path')
-if not os.path.exists(DOWNLOAD_PATH):
-    os.makedirs(DOWNLOAD_PATH)
 
 
 class Download(BaseAnalysis):
     session = requests.session()
-    headers = {
-        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.116 Safari/537.36'
-    }
 
-    def __init__(self):
+    def __init__(self, rest_id_list):
         super(Download, self).__init__()
-        self.run()
+        if not os.path.exists(self.download_path):
+            os.makedirs(self.download_path)
+        self.rest_id_list = rest_id_list
+        self.headers = self.User_Agent
 
     @staticmethod
     def save_img(path, resp):
@@ -68,13 +59,14 @@ class Download(BaseAnalysis):
         if not os.path.exists(path):
             os.makedirs(path)
 
-    def get_downloadInfo(self):
+    def init_downloadInfo(self, match):
         redis_name = self._analysis_downloadInfo
-        download_info = list(self.iter_get_all(redis_name))
-        for rest_id, item in download_info:
+        for rest_id, item in self.iter_get_all(redis_name, match=match):
+            user_id = str(rest_id).split('_')[0]
             item = json.loads(item)
             name = item.get('name')
-            base_path = os.path.join(DOWNLOAD_PATH, name)
+            screen_name = item.get('screen_name')
+            base_path = os.path.join(self.download_path, f"{user_id}_{screen_name}_{name}")
             download_item = dict()
             # 下载图片
             img_info = item.get('img_info')
@@ -99,25 +91,40 @@ class Download(BaseAnalysis):
             if download_item:
                 yield download_item
 
-    def run(self):
-        download_item = self.get_downloadInfo()
-        download_list = list(download_item)
-
+    def run_download_thread_pool(self):
+        logger.info("准备下载数据中...")
         download_info = list()
-        for _ in download_list:
-            img = _.get('img')
-            if img:
-                for i in img:
-                    i.update({'file_type': 'img'})
-                    download_info.append(i)
+        for num, match in enumerate(self.rest_id_list, start=1):
+            for info in self.init_downloadInfo(match=f"{match}_*"):
+                img = info.get('img')
+                if img:
+                    for i in img:
+                        i.update({'file_type': 'img'})
+                        download_info.append(i)
 
-            video = _.get('video')
-            if video:
-                video.update({'file_type': 'video'})
-                download_info.append(video)
+                video = info.get('video')
+                if video:
+                    video.update({'file_type': 'video'})
+                    download_info.append(video)
+            logger.info(f"[{num}/{len(self.rest_id_list)}][{match}] 数据准备成功...")
 
-        thread_pool(method=self.download,data=download_info,prompt="下载图片",thread_num=2)
+        thread_pool(method=self.download, data=download_info, prompt="下载图片", thread_num=self.thread)
 
+    def run_download(self):
+        logger.info("准备下载数据中...")
 
-if __name__ == '__main__':
-    d = Download()
+        for num, match in enumerate(self.rest_id_list, start=1):
+            download_info = list()
+            for info in self.init_downloadInfo(match=f"{match}_*"):
+                img = info.get('img')
+                if img:
+                    for i in img:
+                        i.update({'file_type': 'img'})
+                        download_info.append(i)
+
+                video = info.get('video')
+                if video:
+                    video.update({'file_type': 'video'})
+                    download_info.append(video)
+            logger.info(f"[{num}/{len(self.rest_id_list)}][{match}] 开始下载...")
+            thread_pool(method=self.download, data=download_info, prompt="下载图片", thread_num=self.thread)

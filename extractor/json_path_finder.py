@@ -161,3 +161,4 @@ class JsonDataFinder(JsonPathFinder):
         target_path = self.find_all(target)
         new_target_path = [path[:-1] for path in target_path]
         return self.join_path(new_target_path)
+

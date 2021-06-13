@@ -16,21 +16,16 @@ import requests
 from requests import Response
 from retrying import retry
 
-from config import global_config
+from init import ConfigAnalysis
 from utils.logger import logger
 
-# retrying
-retry_max_number = global_config.getRaw('request', 'retry_max_number')
-retry_min_random_wait = global_config.getRaw('request', 'retry_min_random_wait')
-retry_max_random_wait = global_config.getRaw('request', 'retry_max_random_wait')
-
-# http
-fetch_timeout = global_config.getRaw('request', 'fetch_timeout')
-
-# VPN代理
-proxies = global_config.getDict([('request', 'http'), ('request', 'https')])
-
-User_Agent = global_config.getDict([('request', 'User_Agent')])
+__info = ConfigAnalysis().load_fetch()
+retry_max_number = __info.get('retry_max_number')
+retry_min_random_wait = __info.get('retry_min_random_wait')
+retry_max_random_wait = __info.get('retry_max_random_wait')
+fetch_timeout = __info.get('fetch_timeout')
+proxies = __info.get('proxies')
+User_Agent = __info.get('User_Agent')
 
 
 def need_retry(exception):
@@ -59,11 +54,10 @@ def init_request_headers(session, **kwargs):
     return session, kwargs
 
 
-def fetch(session, url, method='get',check_code=True, **kwargs):
+def fetch(session, url, method='get', check_code=True, **kwargs):
     @retry(stop_max_attempt_number=retry_max_number, wait_random_min=retry_min_random_wait,
            wait_random_max=retry_max_random_wait, retry_on_exception=need_retry)
-
-    def _fetch(session, url,check_code, **kwargs) -> Response:
+    def _fetch(session, url, check_code, **kwargs) -> Response:
         response = session.post(url, **kwargs) if method == 'post' else session.get(url, **kwargs)
         if check_code:
             if response.status_code != 200:
@@ -73,7 +67,7 @@ def fetch(session, url, method='get',check_code=True, **kwargs):
 
     try:
         session, kwargs = init_request_headers(session, **kwargs)
-        resp = _fetch(session, url,check_code, **kwargs)
+        resp = _fetch(session, url, check_code, **kwargs)
         return resp
     except Exception as e:
         error_info = 'Something got wrong, error msg:{}'.format(e)
